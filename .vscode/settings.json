@@ -1,0 +1,5 @@
+{
+    "sarif-viewer.connectToGithubCodeScanning": "off",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "standard"
+}
