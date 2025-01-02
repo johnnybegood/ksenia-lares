@@ -1,5 +1,3 @@
-import array
-from ast import Dict
 import logging
 from typing import List
 from getmac import get_mac_address
