@@ -196,11 +196,9 @@ class IpAPI(BaseApi):
             raise ConnectionError(
                 "Connector error while getting information from Lares alarm."
             )
-        except:  # pylint: disable=bare-except
+        except BaseException as e:
             _LOGGER.warning("Host %s: Unknown exception occurred", self._host)
-            raise ConnectionError(
-                "Unkown error while getting information from Lares alarm."
-            )
+            raise e
 
     async def _get_descriptions(self, path: str, element: str) -> List[str]:
         """Get descriptions"""
