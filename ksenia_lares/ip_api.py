@@ -1,13 +1,16 @@
+import array
+from ast import Dict
 import logging
 from typing import List
-
 from getmac import get_mac_address
 import aiohttp
 from lxml import etree
 
+from .types import AlarmInfo, Zone, ZoneStatus
 from .base_api import BaseApi
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class IpAPI(BaseApi):
     """Implementation for the IP range of Kseni Lares (Lare 16 IP, 48 IP & 128 IP)."""
@@ -36,27 +39,16 @@ class IpAPI(BaseApi):
         self._port = data["port"]
         self._host = f"http://{self._ip}:{self._port}"
         self._model = None
-        self._zone_descriptions = None
-        self._partition_descriptions = None
-        self._scenario_descriptions = None
+        self._description_cache = {}
 
-    async def info(self) -> dict[str, str] | None:
-        """Get general info"""
+    async def info(self) -> AlarmInfo:
+        """Get info about the alarm system, like name and version"""
         response = await self._get("info/generalInfo.xml")
-
-        if response is None:
-            return None
-
         mac = get_mac_address(ip=self._ip)
-        unique_id = str(mac)
 
-        if mac is None:
-            # Fallback to IP addresses when MAC cannot be determined
-            unique_id = f"{self._ip}:{self._port}"
-
-        info = {
+        info: AlarmInfo = {
             "mac": mac,
-            "id": unique_id,
+            "host": f"{self._ip}:{self._port}",
             "name": response.xpath("/generalInfo/productName")[0].text,
             "info": response.xpath("/generalInfo/info1")[0].text,
             "version": response.xpath("/generalInfo/productHighRevision")[0].text,
@@ -66,48 +58,23 @@ class IpAPI(BaseApi):
 
         return info
 
-    async def device_info(self) -> dict | None:
-        """Get device info"""
-        device_info = await self.info()
-
-        if device_info is None:
-            return None
-
-        return {
-            "id": device_info["id"],
-            "name": device_info["name"],
-            "model": device_info["name"],
-            "sw_version": f'{device_info["version"]}.{device_info["revision"]}.{device_info["build"]}',
-            "configuration_url": self._host,
-            "MAC": device_info["mac"]
-        }
-
-    async def zone_descriptions(self):
-        """Get available zones"""
-        model = await self.get_model()
-        if self._zone_descriptions is None:
-            self._zone_descriptions = await self._get_descriptions(
-                f"zones/zonesDescription{model}.xml", "/zonesDescription/zone"
-            )
-
-        return self._zone_descriptions
-
-    async def zones(self):
-        """Get available zones"""
+    async def get_zones(self) -> List[Zone]:
+        """Get status of all zones"""
         model = await self.get_model()
         response = await self._get(f"zones/zonesStatus{model}.xml")
-
-        if response is None:
-            return None
-
         zones = response.xpath("/zonesStatus/zone")
+        descriptions: List[str] = await self._get_descriptions(
+            f"zones/zonesDescription{model}.xml", "/zonesDescription/zone"
+        )
 
         return [
-            {
-                "status": zone.find("status").text,
-                "bypass": zone.find("bypass").text,
-            }
-            for zone in zones
+            Zone(
+                id=f"lares_zones_{index}",
+                description=descriptions[index],
+                status=zone.find("status").text,
+                bypass=zone.find("bypass").text,
+            )
+            for index, zone in enumerate(zones)
         ]
 
     async def partition_descriptions(self):
@@ -228,15 +195,25 @@ class IpAPI(BaseApi):
 
         except aiohttp.ClientConnectorError as conn_err:
             _LOGGER.warning("Host %s: Connection error %s", self._host, str(conn_err))
-            raise ConnectionError("Connector error while getting information from Lares alarm.")
+            raise ConnectionError(
+                "Connector error while getting information from Lares alarm."
+            )
         except:  # pylint: disable=bare-except
             _LOGGER.warning("Host %s: Unknown exception occurred", self._host)
-            raise ConnectionError("Unkown error while getting information from Lares alarm.")
-    
-    async def _get_descriptions(self, path: str, element: str) -> List[str] | None:
+            raise ConnectionError(
+                "Unkown error while getting information from Lares alarm."
+            )
+
+    async def _get_descriptions(self, path: str, element: str) -> List[str]:
         """Get descriptions"""
+        if path in self._description_cache:
+            return self._description_cache[path]
+
         response = await self._get(path)
         content = response.xpath(element)
-        descriptions: List[str] = [item.text for item in content if item.text is not None]
-    
+        descriptions: List[str] = [
+            item.text for item in content if item.text is not None
+        ]
+
+        self._description_cache[path] = descriptions
         return descriptions
