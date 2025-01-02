@@ -69,7 +69,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 3. Install dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -e .[dev]
 ```
 4. Run tests to ensure everything is working:
 ```bash

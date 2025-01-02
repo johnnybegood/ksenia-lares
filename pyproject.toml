@@ -22,10 +22,12 @@ dependencies = [
 requires-python = ">=3.7"
 
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
     "aioresponses",
+    "flake8",
 ]
 
 [tool.setuptools]
