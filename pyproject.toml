@@ -28,6 +28,7 @@ dev = [
     "pytest-cov",
     "aioresponses",
     "flake8",
+    "pydoc-markdown",
 ]
 
 [tool.setuptools]
