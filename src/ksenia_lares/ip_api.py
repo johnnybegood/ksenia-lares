@@ -4,7 +4,7 @@ from getmac import get_mac_address
 import aiohttp
 from lxml import etree
 
-from .types import AlarmInfo, Zone, ZoneBypass, ZoneStatus
+from .types import AlarmInfo, Partition, PartitionStatus, Zone, ZoneBypass, ZoneStatus
 from .base_api import BaseApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,33 +75,23 @@ class IpAPI(BaseApi):
             for index, zone in enumerate(zones)
         ]
 
-    async def partition_descriptions(self):
-        """Get available partitions"""
-        model = await self.get_model()
-
-        if self._partition_descriptions is None:
-            self._partition_descriptions = await self._get_descriptions(
-                f"partitions/partitionsDescription{model}.xml",
-                "/partitionsDescription/partition",
-            )
-
-        return self._partition_descriptions
-
-    async def partitions(self):
+    async def get_partitions(self) -> List[Partition]:
         """Get status of partitions"""
         model = await self.get_model()
         response = await self._get(f"partitions/partitionsStatus{model}.xml")
-
-        if response is None:
-            return None
-
         partitions = response.xpath("/partitionsStatus/partition")
+        descriptions: List[str] = await self._get_descriptions(
+            f"partitions/partitionsDescription{model}.xml",
+            "/partitionsDescription/partition",
+        )
 
         return [
-            {
-                "status": partition.text,
-            }
-            for partition in partitions
+            Partition(
+                id=f"lares_partitions_{index}",
+                description=descriptions[index],
+                status=PartitionStatus(partition.text),
+            )
+            for index, partition in enumerate(partitions)
         ]
 
     async def scenarios(self):

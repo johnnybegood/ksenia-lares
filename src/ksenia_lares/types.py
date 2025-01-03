@@ -30,9 +30,29 @@ class ZoneBypass(Enum):
 
 @dataclass
 class Zone:
-    """Alarm zone (without description)."""
+    """Alarm zone."""
 
     id: str
     description: str
     status: ZoneStatus
     bypass: ZoneBypass
+
+
+class PartitionStatus(Enum):
+    """Status of alarm partition."""
+
+    DISARMED = "DISARMED"
+    ARMED = "ARMED"
+    ARMED_IMMEDIATE = "ARMED_IMMEDIATE"
+    ARMING = "EXIT"
+    PENDING = "PREALARM"
+    ALARM = "ALARM"
+
+
+@dataclass
+class Partition:
+    """Alarm partition."""
+
+    id: str
+    description: str
+    status: PartitionStatus

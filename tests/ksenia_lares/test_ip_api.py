@@ -1,9 +1,9 @@
 from unittest.mock import patch
-from aiohttp import ClientConnectorError, ClientError
+from aiohttp import ClientError
 import pytest
 from aioresponses import aioresponses
 from ksenia_lares import IpAPI
-from ksenia_lares.types import AlarmInfo, Zone, ZoneBypass, ZoneStatus
+from ksenia_lares.types import PartitionStatus, ZoneBypass, ZoneStatus
 
 
 @pytest.fixture
@@ -50,6 +50,18 @@ def mock_xml_responses():
             <zone>Description 2</zone>
             <zone></zone>
         </zonesDescription>
+        """,
+        "partitionsDescription.xml": """
+        <partitionsDescription>
+            <partition>Description 1</partition>
+            <partition></partition>
+        </partitionsDescription>
+        """,
+        "partitionsStatus.xml": """
+        <partitionsStatus>
+            <partition>ARMED</partition>
+            <partition>DISARMED</partition>
+        </partitionsStatus>
         """,
     }
 
@@ -162,3 +174,72 @@ async def test_get_zones_successfull(mock_config, mock_xml_responses):
         assert zones[2].id == "lares_zones_2"
         assert zones[2].bypass == ZoneBypass.OFF
         assert zones[2].status == ZoneStatus.NOT_USED
+
+@pytest.mark.asyncio
+async def test_get_partitions_successfull(mock_config, mock_xml_responses):
+    with aioresponses() as mocked:
+        mocked.get(
+            "http://192.168.1.1:8080/xml/info/generalInfo.xml",
+            body=mock_xml_responses["info/generalInfo.xml"],
+            content_type="text/xml",
+        )
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/partitions/partitionsStatus128IP.xml",
+            body=mock_xml_responses["partitionsStatus.xml"],
+            content_type="text/xml",
+        )
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/partitions/partitionsDescription128IP.xml",
+            body=mock_xml_responses["partitionsDescription.xml"],
+            content_type="text/xml",
+        )
+
+        api = IpAPI(mock_config)
+        result = await api.get_partitions()
+
+        mocked.assert_called
+        assert len(result) == 2
+        assert result[0].description == "Description 1"
+        assert result[0].id == "lares_partitions_0"
+        assert result[0].status == PartitionStatus.ARMED
+
+        assert result[1].description is None
+        assert result[1].id == "lares_partitions_1"
+        assert result[1].status == PartitionStatus.DISARMED
+
+@pytest.mark.asyncio
+async def test_get_partitions_caches_descriptions(mock_config, mock_xml_responses):
+    with aioresponses() as mocked:
+        mocked.get(
+            "http://192.168.1.1:8080/xml/info/generalInfo.xml",
+            body=mock_xml_responses["info/generalInfo.xml"],
+            content_type="text/xml",
+        )
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/partitions/partitionsStatus128IP.xml",
+            body=mock_xml_responses["partitionsStatus.xml"],
+            content_type="text/xml",
+            repeat=2
+        )
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/partitions/partitionsDescription128IP.xml",
+            body=mock_xml_responses["partitionsDescription.xml"],
+            content_type="text/xml",
+            repeat=False
+        )
+
+        api = IpAPI(mock_config)
+        await api.get_partitions()
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/partitions/partitionsDescription128IP.xml",
+            status=500 #We fail the second request to test it is only called once
+        )
+
+        await api.get_partitions()
+        mocked.assert_called()
+
