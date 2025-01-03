@@ -187,6 +187,14 @@ class IpAPI(BaseApi):
         try:
             async with aiohttp.ClientSession(auth=self._auth) as session:
                 async with session.get(url=url) as response:
+                    if response.status != 200:
+                        raise aiohttp.ClientResponseError(
+                            request_info=response.request_info,
+                            history=response.history,
+                            status=response.status,
+                            message=f"Request failed with status {response.status}: {await response.text()}",
+                        )
+                    
                     xml = await response.text()
                     content: etree.ElementBase = etree.fromstring(xml, parser=None)
                     return content
