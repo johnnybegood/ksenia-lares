@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ksenia_lares"
+version = "0.1.0"
+description = "A Python package for interacting with Ksenia Lares APIs"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["ksenia", "lares"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "aiohttp",
+    "lxml",
+    "getmac"
+]
+requires-python = ">=3.7"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "aioresponses",
+    "flake8",
+    "pydoc-markdown",
+]
+
+[tool.setuptools]
+packages = ["ksenia_lares"]
+package-dir = {"" = "src"}
