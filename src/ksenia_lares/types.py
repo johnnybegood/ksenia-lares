@@ -21,6 +21,13 @@ class ZoneStatus(Enum):
     NOT_USED = "NOT_USED"
 
 
+class ZoneBypass(Enum):
+    """Bypass of alarm zone."""
+
+    OFF = "UN_BYPASS"
+    ON = "BYPASS"
+
+
 @dataclass
 class Zone:
     """Alarm zone (without description)."""
@@ -28,4 +35,4 @@ class Zone:
     id: str
     description: str
     status: ZoneStatus
-    bypass: str
+    bypass: ZoneBypass

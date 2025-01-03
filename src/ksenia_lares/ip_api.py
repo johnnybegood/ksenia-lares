@@ -4,7 +4,7 @@ from getmac import get_mac_address
 import aiohttp
 from lxml import etree
 
-from .types import AlarmInfo, Zone, ZoneStatus
+from .types import AlarmInfo, Zone, ZoneBypass, ZoneStatus
 from .base_api import BaseApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -69,8 +69,8 @@ class IpAPI(BaseApi):
             Zone(
                 id=f"lares_zones_{index}",
                 description=descriptions[index],
-                status=zone.find("status").text,
-                bypass=zone.find("bypass").text,
+                status=ZoneStatus(zone.find("status").text),
+                bypass=ZoneBypass(zone.find("bypass").text),
             )
             for index, zone in enumerate(zones)
         ]
@@ -194,7 +194,7 @@ class IpAPI(BaseApi):
                             status=response.status,
                             message=f"Request failed with status {response.status}: {await response.text()}",
                         )
-                    
+
                     xml = await response.text()
                     content: etree.ElementBase = etree.fromstring(xml, parser=None)
                     return content
@@ -215,9 +215,7 @@ class IpAPI(BaseApi):
 
         response = await self._get(path)
         content = response.xpath(element)
-        descriptions: List[str] = [
-            item.text for item in content if item.text is not None
-        ]
+        descriptions: List[str] = [item.text for item in content]
 
         self._description_cache[path] = descriptions
         return descriptions
