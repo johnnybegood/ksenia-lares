@@ -32,10 +32,14 @@ class ZoneBypass(Enum):
 class Zone:
     """Alarm zone."""
 
-    id: str
+    id: int
     description: str
     status: ZoneStatus
     bypass: ZoneBypass
+
+    @property
+    def enabled(self):
+        return self.description is not None
 
 
 class PartitionStatus(Enum):
@@ -53,6 +57,20 @@ class PartitionStatus(Enum):
 class Partition:
     """Alarm partition."""
 
-    id: str
+    id: int
     description: str
     status: PartitionStatus
+
+    @property
+    def enabled(self):
+        return self.description is not None
+
+
+@dataclass
+class Scenario:
+    """Alarm scenario."""
+
+    id: int
+    description: str
+    enabled: bool
+    noPin: bool

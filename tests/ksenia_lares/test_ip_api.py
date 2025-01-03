@@ -63,6 +63,29 @@ def mock_xml_responses():
             <partition>DISARMED</partition>
         </partitionsStatus>
         """,
+        "scenariosDescription.xml": """
+        <scenariosDescription>
+            <scenario>Turn off</scenario>
+            <scenario>Alarm on</scenario>
+            <scenario>Scenario</scenario>
+        </scenariosDescription>
+        """,
+        "scenariosOptions.xml": """
+        <scenariosOptions>
+            <scenario>
+                <abil>TRUE</abil>
+                <nopin>TRUE</nopin>
+            </scenario>
+            <scenario>
+                <abil>TRUE</abil>
+                <nopin>FALSE</nopin>
+            </scenario>
+            <scenario>
+                <abil>FALSE</abil>
+                <nopin>FALSE</nopin>
+            </scenario>
+        </scenariosOptions>
+        """,
     }
 
 
@@ -161,19 +184,23 @@ async def test_get_zones_successfull(mock_config, mock_xml_responses):
         mocked.assert_called
         assert len(zones) == 3
         assert zones[0].description == "Description 1"
-        assert zones[0].id == "lares_zones_0"
+        assert zones[0].id == 0
         assert zones[0].bypass == ZoneBypass.OFF
         assert zones[0].status == ZoneStatus.NORMAL
+        assert zones[0].enabled == True
 
         assert zones[1].description == "Description 2"
-        assert zones[1].id == "lares_zones_1"
+        assert zones[1].id == 1
         assert zones[1].bypass == ZoneBypass.ON
         assert zones[1].status == ZoneStatus.ALARM
+        assert zones[1].enabled == True
 
         assert zones[2].description is None
-        assert zones[2].id == "lares_zones_2"
+        assert zones[2].id == 2
         assert zones[2].bypass == ZoneBypass.OFF
         assert zones[2].status == ZoneStatus.NOT_USED
+        assert zones[2].enabled == False
+
 
 @pytest.mark.asyncio
 async def test_get_partitions_successfull(mock_config, mock_xml_responses):
@@ -202,12 +229,15 @@ async def test_get_partitions_successfull(mock_config, mock_xml_responses):
         mocked.assert_called
         assert len(result) == 2
         assert result[0].description == "Description 1"
-        assert result[0].id == "lares_partitions_0"
+        assert result[0].id == 0
         assert result[0].status == PartitionStatus.ARMED
+        assert result[0].enabled == True
 
         assert result[1].description is None
-        assert result[1].id == "lares_partitions_1"
+        assert result[1].id == 1
         assert result[1].status == PartitionStatus.DISARMED
+        assert result[1].enabled == False
+
 
 @pytest.mark.asyncio
 async def test_get_partitions_caches_descriptions(mock_config, mock_xml_responses):
@@ -222,14 +252,14 @@ async def test_get_partitions_caches_descriptions(mock_config, mock_xml_response
             "http://192.168.1.1:8080/xml/partitions/partitionsStatus128IP.xml",
             body=mock_xml_responses["partitionsStatus.xml"],
             content_type="text/xml",
-            repeat=2
+            repeat=2,
         )
 
         mocked.get(
             "http://192.168.1.1:8080/xml/partitions/partitionsDescription128IP.xml",
             body=mock_xml_responses["partitionsDescription.xml"],
             content_type="text/xml",
-            repeat=False
+            repeat=False,
         )
 
         api = IpAPI(mock_config)
@@ -237,9 +267,50 @@ async def test_get_partitions_caches_descriptions(mock_config, mock_xml_response
 
         mocked.get(
             "http://192.168.1.1:8080/xml/partitions/partitionsDescription128IP.xml",
-            status=500 #We fail the second request to test it is only called once
+            status=500,  # We fail the second request to test it is only called once
         )
 
         await api.get_partitions()
         mocked.assert_called()
 
+
+@pytest.mark.asyncio
+async def test_get_scenarios_successfull(mock_config, mock_xml_responses):
+    with aioresponses() as mocked:
+        mocked.get(
+            "http://192.168.1.1:8080/xml/info/generalInfo.xml",
+            body=mock_xml_responses["info/generalInfo.xml"],
+            content_type="text/xml",
+        )
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/scenarios/scenariosOptions.xml",
+            body=mock_xml_responses["scenariosOptions.xml"],
+            content_type="text/xml",
+        )
+
+        mocked.get(
+            "http://192.168.1.1:8080/xml/scenarios/scenariosDescription.xml",
+            body=mock_xml_responses["scenariosDescription.xml"],
+            content_type="text/xml",
+        )
+
+        api = IpAPI(mock_config)
+        result = await api.get_scenarios()
+
+        mocked.assert_called
+        assert len(result) == 3
+        assert result[0].description == "Turn off"
+        assert result[0].id == 0
+        assert result[0].enabled == True
+        assert result[0].noPin == True
+
+        assert result[1].description == "Alarm on"
+        assert result[1].id == 1
+        assert result[1].enabled == True
+        assert result[1].noPin == False
+
+        assert result[2].description == "Scenario"
+        assert result[2].id == 2
+        assert result[2].enabled == False
+        assert result[2].noPin == False

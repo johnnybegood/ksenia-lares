@@ -4,7 +4,15 @@ from getmac import get_mac_address
 import aiohttp
 from lxml import etree
 
-from .types import AlarmInfo, Partition, PartitionStatus, Zone, ZoneBypass, ZoneStatus
+from .types import (
+    AlarmInfo,
+    Partition,
+    PartitionStatus,
+    Scenario,
+    Zone,
+    ZoneBypass,
+    ZoneStatus,
+)
 from .base_api import BaseApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,7 +75,7 @@ class IpAPI(BaseApi):
 
         return [
             Zone(
-                id=f"lares_zones_{index}",
+                id=index,
                 description=descriptions[index],
                 status=ZoneStatus(zone.find("status").text),
                 bypass=ZoneBypass(zone.find("bypass").text),
@@ -87,39 +95,31 @@ class IpAPI(BaseApi):
 
         return [
             Partition(
-                id=f"lares_partitions_{index}",
+                id=index,
                 description=descriptions[index],
                 status=PartitionStatus(partition.text),
             )
             for index, partition in enumerate(partitions)
         ]
 
-    async def scenarios(self):
+    async def get_scenarios(self) -> List[Scenario]:
         """Get status of scenarios"""
         response = await self._get("scenarios/scenariosOptions.xml")
-
-        if response is None:
-            return None
-
         scenarios = response.xpath("/scenariosOptions/scenario")
+        descriptions: List[str] = await self._get_descriptions(
+            "scenarios/scenariosDescription.xml",
+            "/scenariosDescription/scenario",
+        )
 
         return [
-            {
-                "id": idx,
-                "enabled": scenario.find("abil").text == "TRUE",
-                "noPin": scenario.find("nopin").text == "TRUE",
-            }
-            for idx, scenario in enumerate(scenarios)
-        ]
-
-    async def scenario_descriptions(self):
-        """Get descriptions of scenarios"""
-        if self._scenario_descriptions is None:
-            self._scenario_descriptions = await self._get_descriptions(
-                "scenarios/scenariosDescription.xml", "/scenariosDescription/scenario"
+            Scenario(
+                id=index,
+                description=descriptions[index],
+                enabled=scenario.find("abil").text.upper() == "TRUE",
+                noPin=scenario.find("nopin").text.upper() == "TRUE",
             )
-
-        return self._scenario_descriptions
+            for index, scenario in enumerate(scenarios)
+        ]
 
     async def activate_scenario(self, scenario: int, code: str) -> bool:
         """Activate the given scenarios, requires the alarm code"""
