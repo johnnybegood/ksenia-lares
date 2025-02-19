@@ -4,15 +4,18 @@ from getmac import get_mac_address
 import aiohttp
 from lxml import etree
 
-from .types import (
+from .types_ip import (
     AlarmInfo,
     Command,
     Partition,
     PartitionStatus,
     Scenario,
-    Zone,
+    Zone as ZoneIP,
     ZoneBypass,
     ZoneStatus,
+)
+from .types_lares4 import (
+    Zone as ZoneLares4
 )
 from .base_api import BaseApi
 
@@ -70,7 +73,7 @@ class IpAPI(BaseApi):
 
         return info
 
-    async def get_zones(self) -> List[Zone]:
+    async def get_zones(self) -> List[ZoneIP]:
         """
         Get status of all zones.
 
@@ -85,7 +88,7 @@ class IpAPI(BaseApi):
         )
 
         return [
-            Zone(
+            ZoneIP(
                 id=index,
                 description=descriptions[index],
                 status=ZoneStatus(zone.find("status").text),
@@ -171,7 +174,7 @@ class IpAPI(BaseApi):
         params = {"macroId": current.id}
         return await self._send_command(Command.SET_MACRO, pin, params)
 
-    async def bypass_zone(self, zone: int | Zone, pin: str, bypass: ZoneBypass) -> bool:
+    async def bypass_zone(self, zone: int | ZoneIP | ZoneLares4, pin: str, bypass: ZoneBypass) -> bool:
         """
         Activates or deactivates the bypass on the given zone.
 
@@ -184,7 +187,7 @@ class IpAPI(BaseApi):
             bool: True if the (un)bypass was executed successfully.
         """
 
-        if isinstance(zone, Zone):
+        if isinstance(zone, ZoneIP):
             zone_id = zone.id
         elif isinstance(zone, int):
             zone_id = zone

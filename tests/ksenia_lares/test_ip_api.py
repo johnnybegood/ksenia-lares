@@ -3,7 +3,7 @@ from aiohttp import ClientError
 import pytest
 from aioresponses import aioresponses
 from ksenia_lares import IpAPI
-from ksenia_lares.types import PartitionStatus, Scenario, Zone, ZoneBypass, ZoneStatus
+from ksenia_lares.types_ip import PartitionStatus, Scenario, Zone, ZoneBypass, ZoneStatus
 
 
 @pytest.fixture

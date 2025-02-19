@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from ksenia_lares.types import AlarmInfo, Partition, Scenario, Zone, ZoneBypass
-
+from ksenia_lares.types_ip import AlarmInfo, Partition, Scenario, Zone, ZoneBypass
 
 class BaseApi(ABC):
     """Base API for the Ksenia Lares"""

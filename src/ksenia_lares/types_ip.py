@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, TypedDict
 
-
 class AlarmInfo(TypedDict):
     mac: Optional[str]
     host: str
@@ -26,7 +25,6 @@ class ZoneBypass(Enum):
 
     OFF = "UN_BYPASS"
     ON = "BYPASS"
-
 
 @dataclass
 class Zone:

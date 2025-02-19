@@ -2,6 +2,7 @@
 
 from .base_api import BaseApi
 from .ip_api import IpAPI
+from .lares4_api import Lares4API
 
 def get_api(config: dict) -> BaseApi:
     """
@@ -15,7 +16,8 @@ def get_api(config: dict) -> BaseApi:
     if version == "IP":
         return IpAPI(config)
 
-    if version == "IP":
-        raise ValueError("Lares 4.0 API not yet supported")
+    if version == "4":
+        raise
+        #return Lares4API(config)
 
     raise ValueError(f"Unsupported API version: {version}")
